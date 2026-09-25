@@ -2,7 +2,7 @@
 
 Internal admin panel for the **Olga** professional networking platform. Operators use it to manage members, events, moderation reports, and GDPR privacy requests.
 
-![Stack](https://img.shields.io/badge/React-19-61dafb) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6) ![Vite](https://img.shields.io/badge/Vite-8-646cff)
+![React](https://img.shields.io/badge/React-19-61dafb) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6) ![Vite](https://img.shields.io/badge/Vite-8-646cff) ![Azure](https://img.shields.io/badge/Azure-Static%20Web%20Apps-0078d4)
 
 ---
 
@@ -10,20 +10,18 @@ Internal admin panel for the **Olga** professional networking platform. Operator
 
 | Screen | What you can do |
 |---|---|
-| **Dashboard** | Platform totals (members, active members, upcoming events, connections, open reports, pending privacy requests) and the next upcoming events |
-| **Members** | Search by name, ID, or headline; filter by status; suspend or reinstate members |
-| **Events** | All events with start/end times, registrations, live-mode flag, and status |
+| **Dashboard** | Platform totals and the next upcoming events |
+| **Members** | Search, filter by status, paginate, and suspend or reinstate members (with confirmation) |
+| **Events** | All events with timings, registrations, live-mode flag, and status |
 | **Moderation** | Triage member reports: review, action, or dismiss |
-| **Privacy requests** | Track export and delete requests against their due dates; overdue dates show in red |
-| **Settings** | Shows the API target, the data source (mock or live), and a live Olga.Core readiness check |
+| **Privacy requests** | Track GDPR export and delete requests against their due dates; overdue ones are flagged |
+| **Settings** | Environment, API target, data source, API readiness, signed-in user, and app version |
+
+**Production features:** Entra ID sign-in with an app-role check, runtime per-environment config, route code-splitting, an error boundary, toasts, confirm dialogs, request timeouts, 401 → re-login, security headers (CSP, HSTS, framing), CI, and automated deploys.
 
 ## Tech stack
 
-- **React 19** + **TypeScript** (strict mode)
-- **Vite** for the dev server and builds
-- **React Router** for routing
-- **TanStack Query** for data fetching, caching, and mutations
-- Plain CSS with design tokens (no UI framework)
+React 19 · TypeScript (strict) · Vite · React Router · TanStack Query · MSAL (Entra ID) · Vitest + Testing Library · ESLint
 
 ---
 
@@ -31,18 +29,10 @@ Internal admin panel for the **Olga** professional networking platform. Operator
 
 ### 1. Prerequisites
 
-- **Node.js 20+** (tested on Node 22), which includes npm
-- **Git**
-- *Optional:* **.NET SDK**, only if you want to run the Olga.Core API for live data
+- **Node.js 20+** (tested on 22) and **Git**
+- *Optional:* **.NET SDK**, only for running Olga.Core to get live data
 
-Check your versions:
-
-```bash
-node -v
-npm -v
-```
-
-### 2. Clone and install
+### 2. Install
 
 ```bash
 git clone https://github.com/jigarce007/olga-admin.git
@@ -51,40 +41,70 @@ git checkout develop
 npm install
 ```
 
-### 3. Configure the environment
-
-```bash
-cp .env.example .env
-```
-
-On Windows PowerShell, use `Copy-Item .env.example .env`.
-
-| Variable | Purpose | Default |
-|---|---|---|
-| `VITE_USE_MOCKS` | `true` serves every screen from built-in sample data; `false` calls the real API | `true` |
-| `VITE_CORE_API_URL` | Olga.Core base URL. **Leave empty for local dev** so requests go through the Vite proxy | *(empty)* |
-| `CORE_API_PROXY_TARGET` | Where the dev server forwards `/v1`, `/ready`, and `/health` | `http://localhost:5000` |
-
-### 4. Start the admin panel
+### 3. Start
 
 ```bash
 npm run dev
 ```
 
-Open **http://localhost:5173**. With the defaults, every screen works on sample data and needs no backend.
+Open **http://localhost:5173**. By default the panel runs on **built-in sample data** with **no login**, so you don't need a backend.
 
-### 5. Optional: use live data from Olga.Core
+### 4. Optional: live data from Olga.Core
 
-1. Start the API from the `Olga.Core` repo. It uses an in-memory database by default, so you don't need a database:
-   ```bash
-   dotnet run --project src/Olga.Core.Api
+1. In the `Olga.Core` repo, run `dotnet run --project src/Olga.Core.Api` and note the URL it prints (for example `http://localhost:5000`).
+2. Copy `.env.example` to `.env` and set `CORE_API_PROXY_TARGET` to that URL.
+3. Create **`public/config.local.json`** (it's gitignored) to override `public/config.json`:
+   ```json
+   { "environment": "local", "apiBaseUrl": "", "useMocks": false }
    ```
-   Note the URL it prints, for example `Now listening on: http://localhost:5000`.
-2. In `.env`, set `VITE_USE_MOCKS=false` and set `CORE_API_PROXY_TARGET` to that URL.
-3. Restart `npm run dev`.
-4. On the **Settings** page, *Core API readiness* should show **Ready**.
+4. Restart `npm run dev`. The **Settings** page should show *Core API readiness: Ready*.
 
-> With mocks off, only **Events** has data today. The other screens need the `/v1/admin/*` endpoints listed below.
+> With mocks off, only **Events** has data today. The other screens need the `/v1/admin/*` endpoints listed under [Backend integration status](#backend-integration-status).
+
+---
+
+## Environments: from dev to production
+
+**Build once, deploy anywhere.** Every environment gets the same build. Only `config.json`, which the browser loads at startup, changes per environment, so going from dev to production is a configuration change, not a code change.
+
+| Setting (`config.json`) | Local | Dev | Production |
+|---|---|---|---|
+| `environment` | `local` | `dev` | `production` |
+| `apiBaseUrl` | `""` (Vite proxy) | dev Core API URL | prod Core API URL |
+| `useMocks` | `true` | `false` | `false` |
+| `auth.enabled` | `false` | `true` | `true` |
+
+The app **refuses to start** in dev or production if mocks are on, auth is off, or the API isn't `https`. That stops a misconfigured deploy from going live. An environment badge in the sidebar always shows where you are.
+
+### Deployment pipeline
+
+| Branch | GitHub Environment | Azure resource |
+|---|---|---|
+| `develop` | `dev` | `stapp-olga-admin-<dev-suffix>` |
+| `main` | `production` | `stapp-olga-admin-<prd-suffix>` |
+
+The Azure Static Web Apps are already defined in `Olga.Infrastructure` (`enable_admin_static_web_app`). On each push, `.github/workflows/deploy.yml` lints, tests, builds, writes `config.json` from the environment's variables, and deploys.
+
+### One-time setup per environment
+
+1. **Entra ID app registration** for the admin SPA:
+   - Platform: *Single-page application*, with redirect URI `https://<swa-host>`
+   - Define an app role **`Olga.Admin`** and assign it to the admins
+   - Grant it the delegated Olga.Core API scope (`api://<api-client-id>/access_as_user`)
+2. **GitHub → Settings → Environments** (`dev`, `production`). Add a protection rule (required reviewers) on `production`.
+
+   | Kind | Name | Example |
+   |---|---|---|
+   | Secret | `AZURE_STATIC_WEB_APPS_API_TOKEN` | Deployment token from the SWA resource |
+   | Variable | `ADMIN_ENVIRONMENT` | `dev` / `production` |
+   | Variable | `ADMIN_API_BASE_URL` | `https://<core-api-host>` |
+   | Variable | `ADMIN_AUTH_AUTHORITY` | `https://login.microsoftonline.com/<tenant-id>` |
+   | Variable | `ADMIN_AUTH_CLIENT_ID` | Admin SPA client ID |
+   | Variable | `ADMIN_AUTH_API_SCOPES` | `api://<api-client-id>/access_as_user` |
+   | Variable | `ADMIN_AUTH_REQUIRED_ROLE` | `Olga.Admin` *(optional, this is the default)* |
+
+   The deploy job skips itself until `ADMIN_API_BASE_URL` is set, so it's safe to merge before Azure is ready.
+3. **Olga.Core:** enable JWT validation, enforce the `Olga.Admin` role on `/v1/admin/*`, and allow CORS from the SWA origin.
 
 ---
 
@@ -92,31 +112,33 @@ Open **http://localhost:5173**. With the defaults, every screen works on sample 
 
 | Command | Description |
 |---|---|
-| `npm run dev` | Start the dev server with hot reload |
-| `npm run build` | Type-check, then build a production bundle into `dist/` |
-| `npm run typecheck` | Type-check only |
-| `npm run preview` | Serve the production build locally |
+| `npm run dev` | Dev server with hot reload |
+| `npm run build` | Type-check and create a production build in `dist/` |
+| `npm run lint` | ESLint, where any warning fails |
+| `npm run typecheck` | TypeScript only |
+| `npm test` | Run the unit and component tests once |
+| `npm run test:watch` | Run the tests in watch mode |
+| `npm run preview` | Serve the production build |
+
+CI (`.github/workflows/ci.yml`) runs lint, typecheck, tests, and build on every PR and push to `develop` and `main`.
 
 ## Project structure
 
 ```
-src/
-├── api/
-│   ├── client.ts      # fetch wrapper: base URL, Idempotency-Key, error mapping
-│   ├── admin.ts       # admin data functions (live API or mock)
-│   ├── mock.ts        # sample data used when VITE_USE_MOCKS=true
-│   └── types.ts       # shared types (mirror Olga.Core.Contracts where they exist)
-├── components/
-│   ├── Layout.tsx     # sidebar and page shell
-│   └── ui.tsx         # PageHeader, Badge, StatCard, QueryState, date formatting
-├── pages/             # Dashboard, Members, Events, Moderation, Privacy, Settings
-├── main.tsx           # app entry and routes
-└── styles.css         # design tokens and styles
+├── .github/workflows/     # ci.yml, deploy.yml
+├── public/config.json     # runtime config (local defaults; replaced per environment on deploy)
+├── scripts/write-config.mjs   # builds config.json and security headers for an environment
+├── staticwebapp.config.json   # SPA fallback, caching, security headers
+└── src/
+    ├── api/               # fetch client, admin API, types, lazy-loaded mocks
+    ├── auth/              # MSAL setup, AuthGate (sign-in and role check)
+    ├── components/        # Layout, UI primitives, toasts, confirm dialog, pagination
+    ├── pages/             # one file per screen (code-split)
+    ├── config.ts          # runtime config loader and validation
+    └── main.tsx           # bootstrap: config → auth → app
 ```
 
 ## Backend integration status
-
-Olga.Core currently exposes only `GET /v1/events` and `/ready`. The other admin calls target **proposed** endpoints, and the panel uses mock data for them until they're built:
 
 | Screen | Endpoint | Status |
 |---|---|---|
@@ -126,21 +148,20 @@ Olga.Core currently exposes only `GET /v1/events` and `/ready`. The other admin 
 | Moderation | `GET /v1/admin/reports`, `PATCH /v1/admin/reports/{id}` | Proposed |
 | Privacy | `GET /v1/admin/privacy-requests`, `PATCH /v1/admin/privacy-requests/{id}` | Proposed |
 
-Every write sends a fresh `Idempotency-Key` header, which Olga.Core requires on all `/v1` writes.
-
-> ⚠️ **Security:** there's no admin authentication yet. Don't deploy this panel publicly until admin login and role checks exist in Olga.Core.
+Every request sends `Authorization: Bearer <token>` when auth is on. Writes also send a fresh `Idempotency-Key`, which Olga.Core requires. Lists currently paginate in the browser; switch to server-side paging when the admin endpoints are built.
 
 ## Troubleshooting
 
 | Problem | Fix |
 |---|---|
-| Settings shows **Unreachable** | Olga.Core isn't running, or `CORE_API_PROXY_TARGET` points to the wrong port. Restart `npm run dev` after editing `.env` |
-| Screens show `404 REQUEST_FAILED` with mocks off | That `/v1/admin/*` endpoint doesn't exist yet. Set `VITE_USE_MOCKS=true` |
-| Port 5173 is already in use | Run `npm run dev -- --port 5174` |
-| Changes to `.env` have no effect | Vite reads `.env` only at startup, so restart the dev server |
+| "Olga Admin couldn't start" | `config.json` is invalid; the message lists what's wrong |
+| Settings shows **Unreachable** | Olga.Core isn't running, or `CORE_API_PROXY_TARGET` is wrong. Restart `npm run dev` after editing `.env` |
+| `404` errors with mocks off | That `/v1/admin/*` endpoint doesn't exist yet |
+| "Access denied" after sign-in | Your account lacks the `Olga.Admin` app role |
+| Port 5173 is already in use | `npm run dev -- --port 5174` |
 
-## Branching and contributing
+## Branching
 
-- **`main`** is production. Never push to it directly; it's updated only through PRs from `develop`.
-- **`develop`** is the integration branch.
-- For new work, branch off `develop` (`feature/<name>`) and open a PR back into `develop`.
+- **`main`** is production and is updated only via PRs from `develop`.
+- **`develop`** is the integration branch and deploys to dev.
+- Branch features off `develop` (`feature/<name>`) and open PRs back into `develop`.

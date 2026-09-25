@@ -8,3 +8,5 @@ dist
 !.vscode/extensions.json
 .idea
 .DS_Store
+public/config.local.json
+coverage

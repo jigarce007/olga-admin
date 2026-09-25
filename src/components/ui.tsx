@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ApiError } from '../api/client';
 
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
@@ -35,14 +35,22 @@ export function StatCard({ label, value }: { label: string; value: number | stri
 export function QueryState({ isLoading, error, empty }: { isLoading: boolean; error: unknown; empty?: boolean }) {
   if (isLoading) return <p className="muted pad">Loading…</p>;
   if (error) {
-    const msg = error instanceof ApiError
-      ? `${error.message}${error.correlationId ? ` (correlation ${error.correlationId})` : ''}`
-      : String(error);
-    return <p className="error pad">Failed to load: {msg}</p>;
+    return <p className="error pad" role="alert">Failed to load: {errorMessage(error)}</p>;
   }
   if (empty) return <p className="muted pad">Nothing here yet.</p>;
   return null;
 }
 
+export function errorMessage(error: unknown): string {
+  if (error instanceof ApiError) return `${error.message}${error.correlationId ? ` (correlation ${error.correlationId})` : ''}`;
+  return error instanceof Error ? error.message : String(error);
+}
+
 export const fmtDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+
+/** Timestamp captured once per mount, so render stays pure. */
+export function useNow() {
+  const [now] = useState(Date.now);
+  return now;
+}

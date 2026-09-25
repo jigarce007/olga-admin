@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { getEvents } from '../api/admin';
+import { Pagination, usePagination } from '../components/Pagination';
 import { Badge, PageHeader, QueryState, fmtDate } from '../components/ui';
 
 export function Events() {
   const events = useQuery({ queryKey: ['events'], queryFn: getEvents });
   const rows = [...(events.data ?? [])].sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt));
+  const { pageRows, ...pager } = usePagination(rows);
 
   return (
     <>
@@ -16,7 +18,7 @@ export function Events() {
             <table>
               <thead><tr><th>Event</th><th>Starts</th><th>Ends</th><th>Registered</th><th>Live mode</th><th>Status</th></tr></thead>
               <tbody>
-                {rows.map((e) => (
+                {pageRows.map((e) => (
                   <tr key={e.eventId}>
                     <td>{e.name}<span className="sub">{e.venue ?? e.eventId}</span></td>
                     <td>{fmtDate(e.startsAt)}</td>
@@ -30,6 +32,7 @@ export function Events() {
             </table>
           </div>
         )}
+        <Pagination {...pager} />
       </section>
     </>
   );

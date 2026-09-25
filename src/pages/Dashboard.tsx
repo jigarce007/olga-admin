@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { getDashboardStats, getEvents } from '../api/admin';
-import { Badge, PageHeader, QueryState, StatCard, fmtDate } from '../components/ui';
+import { Badge, PageHeader, QueryState, StatCard, fmtDate, useNow } from '../components/ui';
 
 export function Dashboard() {
   const stats = useQuery({ queryKey: ['stats'], queryFn: getDashboardStats });
   const events = useQuery({ queryKey: ['events'], queryFn: getEvents });
-  const upcoming = (events.data ?? []).filter((e) => Date.parse(e.startsAt) > Date.now()).slice(0, 5);
+  const now = useNow();
+  const upcoming = (events.data ?? []).filter((e) => Date.parse(e.startsAt) > now).slice(0, 5);
 
   return (
     <>

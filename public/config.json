@@ -1,0 +1,13 @@
+{
+  "environment": "local",
+  "apiBaseUrl": "",
+  "useMocks": true,
+  "requestTimeoutMs": 15000,
+  "auth": {
+    "enabled": false,
+    "authority": "",
+    "clientId": "",
+    "apiScopes": [],
+    "requiredRole": "Olga.Admin"
+  }
+}
