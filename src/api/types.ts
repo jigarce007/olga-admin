@@ -1,6 +1,8 @@
-// Shapes mirror Olga.Core.Contracts where a contract exists; admin-only shapes are proposals.
+// Mirrors Olga.Core.Contracts admin records (camelCased by the API client).
+// Status values match the database check constraints.
 
-export type ProfileStatus = 'DRAFT' | 'ACTIVE' | 'SUSPENDED' | 'DELETED';
+export type ProfileStatus = 'DRAFT' | 'PENDING_REVIEW' | 'ACTIVE' | 'HIDDEN';
+export const PROFILE_STATUSES: ProfileStatus[] = ['ACTIVE', 'DRAFT', 'PENDING_REVIEW', 'HIDDEN'];
 
 export interface AdminMember {
   memberId: string;
@@ -10,49 +12,94 @@ export interface AdminMember {
   profileStatus: ProfileStatus;
   visibility: string;
   completenessScore: number;
-  emailHint: string | null;
-  phoneHint: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-// Olga.Core.Contracts.EventResponse
-export interface EventResponse {
+export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+export const EVENT_STATUSES: EventStatus[] = ['DRAFT', 'PUBLISHED', 'ACTIVE', 'COMPLETED', 'CANCELLED'];
+
+export interface AdminEvent {
   eventId: string;
+  communityId: string;
   name: string;
+  description: string | null;
   startsAt: string;
   endsAt: string;
-  status: string;
+  status: EventStatus;
+  liveModeEnabled: boolean;
+  venueId: string | null;
+  venue: string | null;
+  attendeeCount: number;
+  liveCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EventInput {
+  name: string;
+  description: string | null;
+  startsAt: string;
+  endsAt: string;
+  venueId: string | null;
   liveModeEnabled: boolean;
 }
 
-export interface AdminEvent extends EventResponse {
-  venue: string | null;
-  registeredCount: number;
-  liveCount: number;
+export interface Attendee {
+  memberId: string;
+  displayName: string;
+  headline: string | null;
+  status: string;
+  registeredAt: string;
+  checkedInAt: string | null;
+  isLive: boolean;
 }
 
-export type ReportStatus = 'OPEN' | 'REVIEWING' | 'ACTIONED' | 'DISMISSED';
-
-export interface ModerationReport {
-  reportId: string;
-  reporterId: string;
-  subjectMemberId: string;
-  subjectDisplayName: string;
-  reason: string;
-  details: string | null;
-  status: ReportStatus;
+export interface Venue {
+  venueId: string;
+  name: string;
+  countryCode: string;
+  region: string | null;
+  city: string | null;
+  timezoneId: string;
+  status: string;
   createdAt: string;
 }
 
-// Olga.Core.Contracts.PrivacyRequestResponse + member reference
+export interface VenueInput {
+  name: string;
+  countryCode: string;
+  timezoneId: string;
+  city: string | null;
+  region: string | null;
+}
+
+export type ReportStatus = 'OPEN' | 'TRIAGED' | 'ACTIONED' | 'CLOSED';
+
+export interface ModerationReport {
+  reportId: string;
+  sourceType: string;
+  subjectMemberId: string | null;
+  subjectDisplayName: string | null;
+  resourceType: string | null;
+  resourceId: string | null;
+  priority: string;
+  status: ReportStatus;
+  createdAt: string;
+  closedAt: string | null;
+}
+
+export type PrivacyStatus = 'OPEN' | 'VERIFIED' | 'PROCESSING' | 'COMPLETED' | 'REJECTED';
+
 export interface PrivacyRequest {
   privacyRequestId: string;
   memberId: string;
   requestType: string;
-  status: string;
+  status: PrivacyStatus;
   createdAt: string;
   dueAt: string | null;
+  verifiedAt: string | null;
+  completedAt: string | null;
 }
 
 export interface DashboardStats {

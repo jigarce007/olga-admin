@@ -9,7 +9,7 @@ export function msal(): PublicClientApplication | null {
 
 export async function initAuth(): Promise<void> {
   const { auth } = config();
-  if (!auth.enabled) return;
+  if (auth.mode !== 'entra') return;
   instance = new PublicClientApplication({
     auth: {
       clientId: auth.clientId,
@@ -49,7 +49,7 @@ export function logout(): Promise<void> {
 /** Bearer token for Olga.Core, or null when auth is disabled. Redirects if interaction is required. */
 export async function getAccessToken(): Promise<string | null> {
   const { auth } = config();
-  if (!auth.enabled || !instance || auth.apiScopes.length === 0) return null;
+  if (auth.mode !== 'entra' || !instance || auth.apiScopes.length === 0) return null;
   const account = activeAccount();
   if (!account) { await login(); return null; }
   try {

@@ -20,9 +20,10 @@ const config = {
   environment: env.ADMIN_ENVIRONMENT,
   apiBaseUrl,
   useMocks: false,
+  adminApiKey: env.ADMIN_API_KEY ?? '',
   requestTimeoutMs: Number(env.ADMIN_REQUEST_TIMEOUT_MS || 15000),
   auth: {
-    enabled: true,
+    mode: 'entra',
     authority: env.ADMIN_AUTH_AUTHORITY,
     clientId: env.ADMIN_AUTH_CLIENT_ID,
     apiScopes: env.ADMIN_AUTH_API_SCOPES.split(/[\s,]+/).filter(Boolean),

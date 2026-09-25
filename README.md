@@ -17,7 +17,7 @@ Internal admin panel for the **Olga** professional networking platform. Operator
 | **Privacy requests** | Track GDPR export and delete requests against their due dates; overdue ones are flagged |
 | **Settings** | Environment, API target, data source, API readiness, signed-in user, and app version |
 
-**Production features:** Entra ID sign-in with an app-role check, runtime per-environment config, route code-splitting, an error boundary, toasts, confirm dialogs, request timeouts, 401 → re-login, security headers (CSP, HSTS, framing), CI, and automated deploys.
+**Production features:** a login page (fixed credentials for local/dev, Entra ID with an app-role check for production), dark and light themes, runtime per-environment config, route code-splitting, an error boundary, toasts, confirm dialogs, request timeouts, 401 → re-login, security headers (CSP, HSTS, framing), CI, and automated deploys.
 
 ## Tech stack
 
@@ -47,7 +47,9 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:5173**. By default the panel runs on **built-in sample data** with **no login**, so you don't need a backend.
+Open **http://localhost:5173** and sign in as **`olgaadmin`**. Get the password from the team; it isn't stored in this repo. By default the panel runs on **built-in sample data**, so you don't need a backend.
+
+> **Theme:** dark by default. Switch with the ☀/☾ button in the sidebar or on the login page; your choice is remembered per browser.
 
 ### 4. Optional: live data from Olga.Core
 
@@ -72,9 +74,25 @@ Open **http://localhost:5173**. By default the panel runs on **built-in sample d
 | `environment` | `local` | `dev` | `production` |
 | `apiBaseUrl` | `""` (Vite proxy) | dev Core API URL | prod Core API URL |
 | `useMocks` | `true` | `false` | `false` |
-| `auth.enabled` | `false` | `true` | `true` |
+| `auth.mode` | `basic` | `basic` or `entra` | `entra` (enforced) |
 
-The app **refuses to start** in dev or production if mocks are on, auth is off, or the API isn't `https`. That stops a misconfigured deploy from going live. An environment badge in the sidebar always shows where you are.
+The app **refuses to start** in dev or production if mocks are on, auth is `none`, or the API isn't `https`. In staging and production it also refuses anything but `entra`. That stops a misconfigured deploy from going live. An environment badge in the sidebar always shows where you are.
+
+### Login modes
+
+| `auth.mode` | How it works | Allowed in |
+|---|---|---|
+| `none` | No login | local |
+| `basic` | One fixed username and password. `config.json` holds only a SHA-256 hash of the password. Sessions last 8 hours, and 5 failed attempts lock sign-in for 30 seconds | local, dev |
+| `entra` | Microsoft Entra ID sign-in plus the `Olga.Admin` app role | everywhere (required in staging and production) |
+
+> ⚠️ `basic` mode is a **convenience gate, not real security**: the check runs in the browser, and anyone can download `config.json`. A short password's hash can be brute-forced. Use it only while Olga.Core admin endpoints stay behind Entra ID or aren't publicly exposed.
+
+To change the basic-mode password, put the new hash in `auth.passwordSha256`:
+
+```bash
+node -e "console.log(require('crypto').createHash('sha256').update(process.argv[1]).digest('hex'))" "<new-password>"
+```
 
 ### Deployment pipeline
 
@@ -157,6 +175,7 @@ Every request sends `Authorization: Bearer <token>` when auth is on. Writes also
 | "Olga Admin couldn't start" | `config.json` is invalid; the message lists what's wrong |
 | Settings shows **Unreachable** | Olga.Core isn't running, or `CORE_API_PROXY_TARGET` is wrong. Restart `npm run dev` after editing `.env` |
 | `404` errors with mocks off | That `/v1/admin/*` endpoint doesn't exist yet |
+| "Too many failed attempts" | Wait 30 seconds, or close the tab (the lockout is per browser tab session) |
 | "Access denied" after sign-in | Your account lacks the `Olga.Admin` app role |
 | Port 5173 is already in use | `npm run dev -- --port 5174` |
 

@@ -1,41 +1,84 @@
-import type { AdminEvent, AdminMember, ModerationReport, PrivacyRequest } from './types';
+import type { AdminEvent, AdminMember, DashboardStats, EventInput, ModerationReport, PrivacyRequest, Venue, VenueInput } from './types';
 
 const day = 86_400_000;
 const iso = (offsetDays: number) => new Date(Date.now() + offsetDays * day).toISOString();
+const delay = <T,>(value: T) => new Promise<T>((r) => setTimeout(() => r(structuredClone(value)), 150));
 
 const names = ['Aisha Khan', 'Ben Carter', 'Chloe Martin', 'Dev Patel', 'Elena Rossi', 'Farah Ali', 'George Lee', 'Hana Suzuki', 'Ivan Petrov', 'Julia Costa', 'Kofi Mensah', 'Lina Haddad'];
 const roles = ['Engineering', 'Product', 'Design', 'Sales', 'Marketing', 'Founder'];
-const statuses: AdminMember['profileStatus'][] = ['ACTIVE', 'ACTIVE', 'ACTIVE', 'DRAFT', 'SUSPENDED'];
+const statuses: AdminMember['profileStatus'][] = ['ACTIVE', 'ACTIVE', 'ACTIVE', 'DRAFT', 'HIDDEN'];
 
-export const members: AdminMember[] = names.map((n, i) => ({
+const members: AdminMember[] = names.map((n, i) => ({
   memberId: `mbr_${(1000 + i).toString(36)}`,
   displayName: n,
   headline: `${roles[i % roles.length]} lead`,
   roleCategory: roles[i % roles.length],
   profileStatus: statuses[i % statuses.length],
   visibility: 'MEMBERS',
-  completenessScore: Math.round((0.4 + ((i * 7) % 6) / 10) * 100) / 100,
-  emailHint: `${n.split(' ')[0][0].toLowerCase()}***@example.com`,
-  phoneHint: `***${(4100 + i * 37).toString().slice(-4)}`,
+  completenessScore: 25 * (1 + (i % 4)),
   createdAt: iso(-60 + i * 3),
   updatedAt: iso(-10 + i),
 }));
 
-export const events: AdminEvent[] = [
-  { eventId: 'evt_london_tech', name: 'London Tech Week Mixer', startsAt: iso(3), endsAt: iso(3.2), status: 'PUBLISHED', liveModeEnabled: true, venue: 'Olympia London', registeredCount: 184, liveCount: 0 },
-  { eventId: 'evt_founders', name: 'Founders Breakfast', startsAt: iso(10), endsAt: iso(10.1), status: 'PUBLISHED', liveModeEnabled: true, venue: 'The Ned', registeredCount: 42, liveCount: 0 },
-  { eventId: 'evt_design', name: 'Design Leaders Meetup', startsAt: iso(21), endsAt: iso(21.15), status: 'DRAFT', liveModeEnabled: false, venue: null, registeredCount: 0, liveCount: 0 },
-  { eventId: 'evt_ai_summit', name: 'AI Summit Networking', startsAt: iso(-5), endsAt: iso(-4.8), status: 'COMPLETED', liveModeEnabled: true, venue: 'ExCeL London', registeredCount: 312, liveCount: 0 },
+const venues: Venue[] = [
+  { venueId: 'ven_olympia', name: 'Olympia London', countryCode: 'GB', region: null, city: 'London', timezoneId: 'Europe/London', status: 'ACTIVE', createdAt: iso(-90) },
 ];
 
-export const reports: ModerationReport[] = [
-  { reportId: 'rpt_001', reporterId: members[0].memberId, subjectMemberId: members[4].memberId, subjectDisplayName: members[4].displayName, reason: 'SPAM', details: 'Sending the same pitch to everyone at the event.', status: 'OPEN', createdAt: iso(-1) },
-  { reportId: 'rpt_002', reporterId: members[2].memberId, subjectMemberId: members[9].memberId, subjectDisplayName: members[9].displayName, reason: 'HARASSMENT', details: 'Repeated messages after I declined.', status: 'REVIEWING', createdAt: iso(-2) },
-  { reportId: 'rpt_003', reporterId: members[5].memberId, subjectMemberId: members[7].memberId, subjectDisplayName: members[7].displayName, reason: 'FAKE_PROFILE', details: null, status: 'DISMISSED', createdAt: iso(-8) },
+const event = (eventId: string, name: string, start: number, status: AdminEvent['status'], attendeeCount: number): AdminEvent => ({
+  eventId, communityId: 'olga', name, description: null, startsAt: iso(start), endsAt: iso(start + 0.2), status,
+  liveModeEnabled: true, venueId: 'ven_olympia', venue: 'Olympia London', attendeeCount, liveCount: 0, createdAt: iso(-30), updatedAt: iso(-1),
+});
+const events: AdminEvent[] = [
+  event('evt_london_tech', 'London Tech Week Mixer', 3, 'PUBLISHED', 184),
+  event('evt_design', 'Design Leaders Meetup', 21, 'DRAFT', 0),
+  event('evt_ai_summit', 'AI Summit Networking', -5, 'COMPLETED', 312),
 ];
 
-export const privacyRequests: PrivacyRequest[] = [
-  { privacyRequestId: 'prv_001', memberId: members[3].memberId, requestType: 'EXPORT', status: 'RECEIVED', createdAt: iso(-2), dueAt: iso(28) },
-  { privacyRequestId: 'prv_002', memberId: members[8].memberId, requestType: 'DELETE', status: 'IN_PROGRESS', createdAt: iso(-12), dueAt: iso(18) },
-  { privacyRequestId: 'prv_003', memberId: members[1].memberId, requestType: 'EXPORT', status: 'COMPLETED', createdAt: iso(-40), dueAt: iso(-10) },
+const reports: ModerationReport[] = [
+  { reportId: 'case-001', sourceType: 'MEMBER_REPORT', subjectMemberId: members[4].memberId, subjectDisplayName: members[4].displayName, resourceType: 'PROFILE', resourceId: members[4].memberId, priority: 'NORMAL', status: 'OPEN', createdAt: iso(-1), closedAt: null },
 ];
+
+const privacyRequests: PrivacyRequest[] = [
+  { privacyRequestId: 'prv_001', memberId: members[3].memberId, requestType: 'EXPORT', status: 'OPEN', createdAt: iso(-2), dueAt: iso(28), verifiedAt: null, completedAt: null },
+];
+
+const data = { members, events, venues, reports, privacyRequests };
+type Data = typeof data;
+type Row<K extends keyof Data> = Data[K][number];
+
+export const list = <K extends keyof Data>(k: K) => delay(data[k]);
+
+export function patch<K extends keyof Data>(k: K, key: keyof Row<K>, value: string, changes: Partial<Row<K>>) {
+  const row = (data[k] as Row<K>[]).find((x) => x[key] === value);
+  if (!row) throw new Error('Not found');
+  Object.assign(row, changes, { updatedAt: new Date().toISOString() });
+  return delay(row);
+}
+
+export function createEvent(input: EventInput, publish: boolean) {
+  const now = new Date().toISOString();
+  const row: AdminEvent = {
+    ...input, eventId: `evt_${crypto.randomUUID().slice(0, 8)}`, communityId: 'olga', status: publish ? 'PUBLISHED' : 'DRAFT',
+    venue: venues.find((v) => v.venueId === input.venueId)?.name ?? null, attendeeCount: 0, liveCount: 0, createdAt: now, updatedAt: now,
+  };
+  events.push(row);
+  return delay(row);
+}
+
+export function createVenue(input: VenueInput) {
+  const row: Venue = { ...input, venueId: `ven_${crypto.randomUUID().slice(0, 8)}`, status: 'ACTIVE', createdAt: new Date().toISOString() };
+  venues.push(row);
+  return delay(row);
+}
+
+export function stats(): Promise<DashboardStats> {
+  const now = Date.now();
+  return delay({
+    totalMembers: members.length,
+    activeMembers: members.filter((m) => m.profileStatus === 'ACTIVE').length,
+    upcomingEvents: events.filter((e) => e.status === 'PUBLISHED' && Date.parse(e.startsAt) > now).length,
+    openReports: reports.filter((r) => r.status === 'OPEN' || r.status === 'TRIAGED').length,
+    pendingPrivacyRequests: privacyRequests.filter((p) => p.status !== 'COMPLETED' && p.status !== 'REJECTED').length,
+    connectionsLast7Days: 57,
+  });
+}

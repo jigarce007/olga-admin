@@ -18,7 +18,7 @@ export default tseslint.config(
   },
   {
     // Shared UI modules intentionally co-locate small hooks/helpers with components.
-    files: ['src/components/**'],
+    files: ['src/components/**', 'src/auth/**'],
     rules: { 'react-refresh/only-export-components': 'off' },
   },
 );

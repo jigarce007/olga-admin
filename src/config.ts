@@ -3,8 +3,22 @@
 
 export type Environment = 'local' | 'dev' | 'staging' | 'production';
 
+/**
+ * none  - no login (local development only)
+ * basic - single fixed username/password checked in the browser. NOT real security:
+ *         anything shipped to the browser can be read. Allowed in local/dev only.
+ * entra - Microsoft Entra ID sign-in with app-role check. Required in staging/production.
+ */
+export type AuthMode = 'none' | 'basic' | 'entra';
+
 export interface AuthConfig {
-  enabled: boolean;
+  mode: AuthMode;
+  /** basic mode */
+  username: string;
+  /** basic mode: hex SHA-256 of the password (never store the plain password) */
+  passwordSha256: string;
+  /** basic mode: session length in minutes */
+  sessionMinutes: number;
   /** e.g. https://login.microsoftonline.com/<tenant-id> or https://<tenant>.ciamlogin.com/ */
   authority: string;
   clientId: string;
@@ -19,6 +33,8 @@ export interface AppConfig {
   /** Olga.Core base URL without trailing slash. Empty = same origin (local Vite proxy). */
   apiBaseUrl: string;
   useMocks: boolean;
+  /** Sent as X-Admin-Key on /v1/admin routes. Interim until Olga.Core validates Entra tokens. */
+  adminApiKey: string;
   requestTimeoutMs: number;
   auth: AuthConfig;
 }
@@ -27,8 +43,12 @@ const defaults: AppConfig = {
   environment: 'local',
   apiBaseUrl: '',
   useMocks: true,
+  adminApiKey: '',
   requestTimeoutMs: 15_000,
-  auth: { enabled: false, authority: '', clientId: '', apiScopes: [], requiredRole: 'Olga.Admin' },
+  auth: {
+    mode: 'none', username: '', passwordSha256: '', sessionMinutes: 480,
+    authority: '', clientId: '', apiScopes: [], requiredRole: 'Olga.Admin',
+  },
 };
 
 let current: AppConfig | null = null;
@@ -41,12 +61,22 @@ export function config(): AppConfig {
 export function validateConfig(c: AppConfig): string[] {
   const errors: string[] = [];
   if (!['local', 'dev', 'staging', 'production'].includes(c.environment)) errors.push(`Unknown environment "${c.environment}"`);
+  const { auth } = c;
+  if (!['none', 'basic', 'entra'].includes(auth.mode)) errors.push(`Unknown auth.mode "${auth.mode}"`);
   if (c.environment !== 'local') {
     if (c.useMocks) errors.push('useMocks must be false outside local');
-    if (!c.auth.enabled) errors.push('auth.enabled must be true outside local');
+    if (auth.mode === 'none') errors.push('auth.mode "none" is only allowed in local');
     if (!c.apiBaseUrl.startsWith('https://')) errors.push('apiBaseUrl must be an https URL outside local');
+    if (!c.useMocks && !c.adminApiKey) errors.push('adminApiKey is required when calling the live API');
   }
-  if (c.auth.enabled) {
+  if ((c.environment === 'staging' || c.environment === 'production') && auth.mode !== 'entra') {
+    errors.push(`auth.mode must be "entra" in ${c.environment}`);
+  }
+  if (auth.mode === 'basic') {
+    if (!auth.username) errors.push('auth.username is required in basic mode');
+    if (!/^[0-9a-f]{64}$/i.test(auth.passwordSha256)) errors.push('auth.passwordSha256 must be a 64-char hex SHA-256');
+  }
+  if (auth.mode === 'entra') {
     if (!c.auth.authority) errors.push('auth.authority is required when auth is enabled');
     if (!c.auth.clientId) errors.push('auth.clientId is required when auth is enabled');
     if (!c.useMocks && c.auth.apiScopes.length === 0) errors.push('auth.apiScopes is required when calling the live API');

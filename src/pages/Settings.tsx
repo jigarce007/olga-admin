@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { activeAccount } from '../auth/msal';
+import { useAuth } from '../auth/AuthGate';
 import { config } from '../config';
 import { PageHeader } from '../components/ui';
 
 export function Settings() {
   const { environment, apiBaseUrl, useMocks, auth } = config();
-  const account = activeAccount();
+  const { user } = useAuth();
   const health = useQuery({
     queryKey: ['health'],
     queryFn: async () => (await fetch(`${apiBaseUrl}/ready`, { signal: AbortSignal.timeout(5000) })).ok,
@@ -27,7 +27,7 @@ export function Settings() {
         </div>
         <div className="field">
           <label>Authentication</label>
-          <span>{auth.enabled ? `Entra ID, signed in as ${account?.username ?? 'unknown'}` : 'Disabled (local only)'}</span>
+          <span>{{ none: 'Disabled (local only)', basic: 'Fixed username/password (local/dev only)', entra: 'Microsoft Entra ID' }[auth.mode]}{user && `, signed in as ${user.username}`}</span>
         </div>
         <div className="field"><label>App version</label><code>{__APP_VERSION__}</code></div>
       </section>

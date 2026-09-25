@@ -1,10 +1,14 @@
 {
   "environment": "local",
   "apiBaseUrl": "",
-  "useMocks": true,
+  "useMocks": false,
+  "adminApiKey": "local-admin-key",
   "requestTimeoutMs": 15000,
   "auth": {
-    "enabled": false,
+    "mode": "basic",
+    "username": "olgaadmin",
+    "passwordSha256": "b2cefb0f44b890456d6d2876ffe2932b97670080320f40a036f85b28ab5795ca",
+    "sessionMinutes": 480,
     "authority": "",
     "clientId": "",
     "apiScopes": [],
