@@ -119,8 +119,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border); }
 .card-head h2 { font-size: 1rem; margin: 0; }
 .card-head a { font-size: .85rem; text-decoration: none; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; margin-bottom: 24px; }
-.stat { padding: 18px 20px; display: flex; align-items: center; gap: 14px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); grid-auto-rows: 1fr; gap: 16px; margin-bottom: 24px; }
+.grid > .card { margin: 0; }
+.stat { padding: 18px 20px; display: flex; align-items: center; gap: 14px; min-height: 88px; }
 .stat-icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; }
 .stat-icon .icon { width: 22px; height: 22px; }
 .stat-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

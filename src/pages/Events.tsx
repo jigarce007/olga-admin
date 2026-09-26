@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { cancelEvent, createEvent, getAttendees, getEvents, getVenues, publishEvent, updateEvent } from '../api/admin';
 import { EVENT_STATUSES, type AdminEvent, type EventInput, type EventStatus } from '../api/types';
 import { Pagination, usePagination } from '../components/Pagination';
 import { useConfirm, useToast } from '../components/feedback';
 import { Icon } from '../components/icons';
+import { VenueForm } from './Venues';
 import { Badge, Modal, PageHeader, QueryState, errorMessage, fmtDate, fromLocalInput, toLocalInput } from '../components/ui';
 
 export function Events() {
@@ -111,6 +112,7 @@ function EventForm({ event, onClose, onSaved }: { event: AdminEvent | null; onCl
     };
   });
   const [error, setError] = useState<string | null>(null);
+  const [addingVenue, setAddingVenue] = useState(false);
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
 
   const save = useMutation({
@@ -153,7 +155,7 @@ function EventForm({ event, onClose, onSaved }: { event: AdminEvent | null; onCl
         <label>Ends
           <input type="datetime-local" value={form.endsAt} onChange={(e) => set('endsAt', e.target.value)} required />
         </label>
-        <label className="full">Venue <span className="hint">Missing one? <Link to="/venues?new=1">Add a venue</Link></span>
+        <label className="full">Venue <span className="hint">Missing one? <button type="button" className="link-btn" style={{ padding: 0 }} onClick={() => setAddingVenue(true)}>Add a venue</button></span>
           <select value={form.venueId} onChange={(e) => set('venueId', e.target.value)}>
             <option value="">Venue to be confirmed</option>
             {(venues.data ?? []).filter((v) => v.status === 'ACTIVE').map((v) => (
@@ -176,6 +178,7 @@ function EventForm({ event, onClose, onSaved }: { event: AdminEvent | null; onCl
           </>}
         </div>
       </form>
+      {addingVenue && <VenueForm onClose={() => setAddingVenue(false)} onCreated={(v) => set('venueId', v.venueId)} />}
     </Modal>
   );
 }

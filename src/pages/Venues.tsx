@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { createVenue, getVenues } from '../api/admin';
+import type { Venue } from '../api/types';
 import { Pagination, usePagination } from '../components/Pagination';
 import { useToast } from '../components/feedback';
 import { Icon } from '../components/icons';
@@ -53,7 +54,8 @@ export function Venues() {
   );
 }
 
-function VenueForm({ onClose }: { onClose: () => void }) {
+/** Also opened from the event form, which passes onCreated to select the new venue. */
+export function VenueForm({ onClose, onCreated }: { onClose: () => void; onCreated?: (venue: Venue) => void }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [form, setForm] = useState({ name: '', city: '', region: '', countryCode: 'IN', timezoneId: browserZone });
@@ -64,7 +66,12 @@ function VenueForm({ onClose }: { onClose: () => void }) {
       name: form.name.trim(), countryCode: form.countryCode.trim().toUpperCase(), timezoneId: form.timezoneId,
       city: form.city.trim() || null, region: form.region.trim() || null,
     }),
-    onSuccess: (v) => { toast('success', `${v.name} added`); qc.invalidateQueries({ queryKey: ['venues'] }); onClose(); },
+    onSuccess: async (v) => {
+      toast('success', `${v.name} added`);
+      await qc.invalidateQueries({ queryKey: ['venues'] });
+      onCreated?.(v);
+      onClose();
+    },
     onError: (e) => setError(errorMessage(e)),
   });
   const submit = (e: FormEvent) => {
