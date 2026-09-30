@@ -2,7 +2,6 @@
   "environment": "local",
   "apiBaseUrl": "",
   "useMocks": false,
-  "adminApiKey": "local-admin-key",
   "requestTimeoutMs": 15000,
   "auth": {
     "mode": "basic",

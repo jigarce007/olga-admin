@@ -22,12 +22,11 @@ function convertKeys(value: unknown, fn: (k: string) => string): unknown {
 }
 
 export async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const { apiBaseUrl, requestTimeoutMs, adminApiKey } = config();
+  const { apiBaseUrl, requestTimeoutMs } = config();
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   // Olga.Core rejects /v1 writes without an idempotency key.
   if (method !== 'GET') headers['Idempotency-Key'] = crypto.randomUUID();
-  if (path.startsWith('/v1/admin') && adminApiKey) headers['X-Admin-Key'] = adminApiKey;
   const token = await getAccessToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 

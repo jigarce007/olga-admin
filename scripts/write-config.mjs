@@ -20,7 +20,6 @@ const config = {
   environment: env.ADMIN_ENVIRONMENT,
   apiBaseUrl,
   useMocks: false,
-  adminApiKey: env.ADMIN_API_KEY ?? '',
   requestTimeoutMs: Number(env.ADMIN_REQUEST_TIMEOUT_MS || 15000),
   auth: {
     mode: 'entra',

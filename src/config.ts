@@ -33,8 +33,6 @@ export interface AppConfig {
   /** Olga.Core base URL without trailing slash. Empty = same origin (local Vite proxy). */
   apiBaseUrl: string;
   useMocks: boolean;
-  /** Sent as X-Admin-Key on /v1/admin routes. Interim until Olga.Core validates Entra tokens. */
-  adminApiKey: string;
   requestTimeoutMs: number;
   auth: AuthConfig;
 }
@@ -43,7 +41,6 @@ const defaults: AppConfig = {
   environment: 'local',
   apiBaseUrl: '',
   useMocks: true,
-  adminApiKey: '',
   requestTimeoutMs: 15_000,
   auth: {
     mode: 'none', username: '', passwordSha256: '', sessionMinutes: 480,
@@ -67,7 +64,6 @@ export function validateConfig(c: AppConfig): string[] {
     if (c.useMocks) errors.push('useMocks must be false outside local');
     if (auth.mode === 'none') errors.push('auth.mode "none" is only allowed in local');
     if (!c.apiBaseUrl.startsWith('https://')) errors.push('apiBaseUrl must be an https URL outside local');
-    if (!c.useMocks && !c.adminApiKey) errors.push('adminApiKey is required when calling the live API');
   }
   if ((c.environment === 'staging' || c.environment === 'production') && auth.mode !== 'entra') {
     errors.push(`auth.mode must be "entra" in ${c.environment}`);

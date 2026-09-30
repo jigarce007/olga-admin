@@ -5,7 +5,6 @@ const base: AppConfig = {
   environment: 'production',
   apiBaseUrl: 'https://api.olga.example',
   useMocks: false,
-  adminApiKey: 'key',
   requestTimeoutMs: 15000,
   auth: { mode: 'entra', username: '', passwordSha256: '', sessionMinutes: 480, authority: 'https://login.microsoftonline.com/tid', clientId: 'cid', apiScopes: ['api://x/access_as_user'], requiredRole: 'Olga.Admin' },
 };
